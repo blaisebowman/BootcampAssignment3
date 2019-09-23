@@ -9,20 +9,32 @@ module.exports = function(req, res, next) {
       var addressTemp = req.body.address;
       var addressTemp2 = addressTemp.toLowerCase();
       var addressTemp3 = addressTemp2.replace(/\s/g, "%20");
-      var addressTemp4 = addressTemp3.replace(/,/g , "%2C");
-      
-    //Setup your options q and key are provided. Feel free to add others to make the JSON response less verbose and easier to read 
-    var options = { 
-      q: addressTemp4,
-      key: config.openCage.key,  
-    }
+      var addressTemp4 = addressTemp3.replace(/,/g, "%2C");
 
-    //Setup your request using URL and options - see ? for format
-    request({
-      url: 'https://api.opencagedata.com/geocode/v1/json', 
-      qs: options
-      }, function(error, response, body) {
-        //For ideas about response and error processing see https://opencagedata.com/tutorials/geocode-in-nodejs
+      //Setup your options q and key are provided. Feel free to add others to make the JSON response less verbose and easier to read
+      var options = {
+          q: addressTemp4,
+          key: config.openCage.key,
+          language: 'en',
+          pretty: 1
+      }
+      //Setup your request using URL and options - see ? for format
+      request({
+          url: 'https://api.opencagedata.com/geocode/v1/json',
+          qs: options
+      }, function (error, response, body) {
+          if (error) {
+              res.status(400).send(err);
+          }
+          var data = JSON.parse(body);
+          req.results = data.results[0].geometry;
+          next();
+      });
+  } else {
+      next();
+  }
+};
+//For ideas about response and error processing see https://opencagedata.com/tutorials/geocode-in-nodejs
         
         //JSON.parse to get contents. Remember to look at the response's JSON format in open cage data
         
@@ -33,9 +45,3 @@ module.exports = function(req, res, next) {
           Assumption: if we get a result we will take the coordinates from the first result returned
         */
         //  req.results = stores you coordinates
-        next();
-    });
-  } else {
-    next();
-  }
-};  

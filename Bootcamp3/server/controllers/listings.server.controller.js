@@ -22,60 +22,103 @@ var mongoose = require('mongoose'),
  */
 
 /* Create a listing */
-exports.create = function(req, res) {
+exports.create = function (req, res) {
 
   /* Instantiate a Listing */
   var listing = new Listing(req.body);
 
   /* save the coordinates (located in req.results if there is an address property) */
-  if(req.results) {
+  if (req.results) {
     listing.coordinates = {
-      latitude: req.results.lat, 
+      latitude: req.results.lat,
       longitude: req.results.lng
     };
   }
- 
+
   /* Then save the listing */
-  listing.save(function(err) {
-    if(err) {
+  listing.save(function (err) {
+    if (err) {
       console.log(err);
       res.status(400).send(err);
     } else {
       res.json(listing);
-      console.log(listing)
+      console.log(listing);
     }
   });
 };
 
 /* Show the current listing */
-exports.read = function(req, res) {
+exports.read = function (req, res) {
   /* send back the listing as json from the request */
   res.json(req.listing);
 };
 
 /* Update a listing - note the order in which this function is called by the router*/
-exports.update = function(req, res) {
-  var listing = req.listing;
-
+exports.update = function (req, res) {
   /* Replace the listings's properties with the new properties found in req.body */
- 
+  var listing = req.listing;
+  var originalCode = listing.code;
+  listing.code = req.body.code;
+  listing.name = req.body.name;
+  listing.address = req.body.address;
   /*save the coordinates (located in req.results if there is an address property) */
- 
+  if (req.results) {
+    listing.coordinates = {
+      latitude: req.results.lat,
+      longitude: req.results.lng
+    };
+  }
   /* Save the listing */
-
+  Listing.findOneAndUpdate({code: originalCode}, {
+    $set: {
+      code: listing.code,
+      address: listing.address,
+      name: listing.name,
+      coordinates: listing.coordinates
+    }
+  }, {returnOriginal: false}, function (err, data) {
+    if (err) {
+      console.log(err);
+      res.status(400).send(err);
+    }
+    res.json(data);
+  });
+  /* listing.save(function (err) {
+     if (err) {
+       console.log(err);
+       res.status(400).send(err);
+     } else {
+       res.json(listing)
+     }
+   })*/
 };
 
 /* Delete a listing */
-exports.delete = function(req, res) {
+exports.delete = function (req, res) {
   var listing = req.listing;
-
-  /* Add your code to remove the listins */
+  Listing.findOneAndRemove({
+    i_id: listing.id
+  })
+      .then(data => {
+        res.json(data);
+      })
+      .catch(err => {
+        console.error(err)
+        res.status(400).send(err);
+      })
 
 };
 
 /* Retreive all the directory listings, sorted alphabetically by listing code */
-exports.list = function(req, res) {
+exports.list = function (req, res) {
   /* Add your code */
+  Listing.find().sort('code').exec(function (err, listings) {
+    if (err) {
+      res.status(400).send(err);
+    } else {
+      res.json(listings); //retrieves all of the directory listings
+    }
+  });
 };
 
 /* 
@@ -85,9 +128,9 @@ exports.list = function(req, res) {
         bind it to the request object as the property 'listing', 
         then finally call next
  */
-exports.listingByID = function(req, res, next, id) {
-  Listing.findById(id).exec(function(err, listing) {
-    if(err) {
+exports.listingByID = function (req, res, next, id) {
+  Listing.findById(id).exec(function (err, listing) {
+    if (err) {
       res.status(400).send(err);
     } else {
       req.listing = listing;
